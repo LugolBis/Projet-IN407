@@ -1,5 +1,9 @@
 ### Projet IN407 
 
+import time
+import random
+import threading
+
 class Paquet:
     nombre_paquets = 0
     def __init__(self,source=0):
@@ -81,7 +85,6 @@ class Buffer:
     def Transmission(self,temps=0):
         """ Cette méthode permet de transmettre un paquet au buffer successeur du buffer avec lequel cette méthode est appelé \n
         En résumé : bufferA [Paquet1,Paquet2,...,PaquetN] et bufferB [ ] -> bufferA [Paquet2,...,PaquetN] et bufferB [Paquet1] """ 
-        import time
         #assert len(self.liste_attente) != 0, "Le Buffer est vide, il ne peut donc pas transmettre de paquet."
         time.sleep(temps)
         if isinstance(self.getSuccesseur(), Buffer) and (self.getCapacite_locale()>0): # On s'assure que le successeur est bien un objet de type 'Buffer' et que le buffer ""source"" n'est pas vide
@@ -97,7 +100,6 @@ class Source(Buffer):
         numéro = Source.nombre_sources # On initialise le numéro de la source
         Source.liste_sources.append(self) # On ajoute à la variable de classe la Source en elle même 
         self._numéro = numéro
-        import time 
         time_active = time.time() # On initialise le temps de création de la source -> notamment utilisé
         self._time_active = time_active
         active = True 
@@ -136,10 +138,8 @@ class Source(Buffer):
     def Generateur_paquet(self):
         """ Générateur de paquet -- Attention !!!! il ne respecte pas encore la loi de poisson"""
         assert isinstance(self.getSuccesseur(), Buffer), f"La source n°{self.getNuméro()} n'a pas de successeur valide."
-        from random import randint
-        import time
         if self.getActive() == True:
-            temps_delta = randint(1,2) # On choisit le délait d'attente avant de générer un nouveau paquet 
+            temps_delta = random.randint(1,2) # On choisit le délait d'attente avant de générer un nouveau paquet 
             time.sleep(temps_delta)  ##################### cela implique d'utiliser des threads lors de l'éxécution de la fonction afin de ne pas arrêter tous le script 
             paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
             print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta} -- temps actuel : {time.time()-self.getTime_active()} -- temps initial : {self.getTime_active()}")
@@ -232,7 +232,6 @@ class Stratégie:
             # Pour l'instant j'essaie de mettre en place une implémentation simple, sans parallélisme de procéssus pour tester préalablement les classes.
             for source_ in Source.liste_sources :
                 source_.Generateur_paquet() 
-            from random import randint 
             file_attente = Source.liste_sources  # On initialise une source d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal 
             indice_max = len(file_attente)-1 # On initialise l'indice max pouvant être tiré au hasard pour accéder à la file d'attente 
             
@@ -240,7 +239,7 @@ class Stratégie:
                 for source_ in Source.liste_sources :
                     source_.Generateur_paquet()                            
 
-                source_ = file_attente[randint(0,indice_max)]  # On prend aléatoirement une source dans la file d'attente 
+                source_ = file_attente[random.randint(0,indice_max)]  # On prend aléatoirement une source dans la file d'attente 
                 source_.Transmission()     # On traite la source
 
                 Buffer_Principal.Transmission() ; Destination.Transmission()
