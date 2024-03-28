@@ -169,12 +169,12 @@ class Source(Buffer):
     active = property(getActive,setActive)
     fournit = property(getFournit,setFournit)
 
-    def Generateur_paquet(self):
+    def Generateur_paquet(self,lambda_poisson=0.5):
         """ Générateur de paquet -- Attention !!!! il ne respecte pas encore la loi de poisson"""
         assert isinstance(self.getSuccesseur(), Buffer), f"La source n°{self.getNuméro()} n'a pas de successeur valide."
         if self.getActive() == True :
-            temps_delta = random.randint(1,2) # On choisit le délait d'attente avant de générer un nouveau paquet 
-            time.sleep(temps_delta)  ##################### cela implique d'utiliser des threads lors de l'éxécution de la fonction afin de ne pas arrêter tous le script 
+            temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
+            time.sleep(temps_delta) 
             paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
             print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta} -- temps actuel : {time.time()-self.getTime_active()} -- temps initial : {self.getTime_active()}")
             self.setFournit(ajout=paquet)
@@ -183,11 +183,11 @@ class Source(Buffer):
     def AfficheTest(self):
         """ Cette fonction est temporaire elle ne sert qu'à afficher l'évolution de la Source pour faciliter les tests sur la classe """
         print(f"Buffer Source {self.getNuméro()} : {self.getListe_attente()} -- Paquets fournit par la Source {self.getNuméro()} : {self.getFournit()}")
-                           
+
 class Stratégie:
     # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données et d'encapsuler les quelques variables nécessaires au déroulement du script (a priori environ 5)
-    def __init__(self,numéro,nombre_source=2,échantillon=20):
-        assert numéro in [1,2,3], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
+    def __init__(self,numéro,nombre_source=2,échantillon=20,parametre_poisson=0.5):
+        assert numéro in [1,2,3,4], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
         assert isinstance(nombre_source,int), "Le nombre de sources utilisées dans la simulation doit être un entier."
         Destination = Buffer() 
         Destination.setCapacite_locale(ajout=Buffer.Capacité - échantillon)  # On initialise la capacité local du Buffer Destination pour décider de la taille de l'échantillon de paquets nous allons baser nos analyses
@@ -203,7 +203,7 @@ class Stratégie:
         if numéro == 1:
             # Implémentation de la stratégie n°1
             for source_ in Source.liste_sources :
-                source_.Generateur_paquet() 
+                source_.Generateur_paquet(parametre_poisson) 
 
             while Destination.getCapacite_locale() < Buffer.Capacité: 
                 
@@ -213,7 +213,7 @@ class Stratégie:
                 liste_threads[0].start() # On démarre la transmission du Buffer Principal 
 
                 for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet()))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
+                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(), args=(parametre_poisson,)))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
 
                 for thread in liste_threads[1:]:
                     thread.start()
@@ -251,7 +251,7 @@ class Stratégie:
         elif numéro == 2:
             # Implémentation de la stratégie n°2
             for source_ in Source.liste_sources :
-                source_.Generateur_paquet() 
+                source_.Generateur_paquet(parametre_poisson) 
             file_attente = Source.liste_sources  # On initialise une file d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal
 
             while Destination.getCapacite_locale() < Buffer.Capacité:  
@@ -262,7 +262,7 @@ class Stratégie:
                 liste_threads[0].start() # On démarre la transmission du Buffer Principal 
 
                 for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet()))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
+                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(), args=(parametre_poisson,)))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
 
                 for thread in liste_threads[1:]:
                     thread.start()
@@ -295,7 +295,7 @@ class Stratégie:
         elif numéro == 3:
             # Implémentation de la stratégie n°3
             for source_ in Source.liste_sources :
-                source_.Generateur_paquet() 
+                source_.Generateur_paquet(parametre_poisson) 
             file_attente = Source.liste_sources  # On initialise une source d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal 
             indice_max = len(file_attente)-1 # On initialise l'indice max pouvant être tiré au hasard pour accéder à la file d'attente 
             
@@ -307,7 +307,7 @@ class Stratégie:
                 liste_threads[0].start() # On démarre la transmission du Buffer Principal 
 
                 for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet()))  # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
+                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(),args=(parametre_poisson,)))  # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
 
                 for thread in liste_threads[1:]:
                     thread.start()
@@ -351,16 +351,25 @@ class Stratégie:
         nombre_paquets_stockés = 0
         for buffer_ in Buffer.liste_buffers :
             nombre_paquets_stockés += len(buffer_.getListe_attente()) # On ajoute le nombre de paquets stockés dans chaque buffer 
-        return 1-round(nombre_paquets_stockés/nombre_paquets_générés, 2) # On renvoie un float arrondi à la 2ème décimale, contenant le taux de perte des paquets
+        résultat = round(nombre_paquets_stockés/nombre_paquets_générés, 2)  # On renvoie un float arrondi à la 2ème décimale, contenant le taux de perte des paquets
+        if résultat == 1: 
+            return 0.0
+        else:
+            return résultat
 
-Test = Stratégie(2,2)
+Test = Stratégie(1,2,20,0.5)
 
 print("\n--------------------- Analyses ---------------------\n")
 print(f"Le temps moyen d'attente des paquets est : {Test.Analyse_Temps()}")
 print(f"Le taux de perte des paquets est : {Test.Analyse_Taux()}")
 
-# Note 1 : La modélisation de la loi de poisson est aproximative et il faut ajouter un moyen de passer celle ci en argument de la classe Stratégie 
+# Note 1 : La modélisation de la loi de poisson est aproximative 
 
 # Note 2 : Y a pas d'interface graphique 
 
 # Note 3 : Qu'en est il de la portabilité ?
+
+class Interface:
+    liste_objets = []
+    def __init__(self):
+        self.coucou = "Coucou Alexia ! Je te souhaites bon courage pour cette classe ;)"
