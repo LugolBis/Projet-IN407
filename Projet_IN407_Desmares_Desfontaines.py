@@ -156,12 +156,52 @@ class Source(Buffer):
         print(f"Buffer Source {self.getNuméro()} : {self.getListe_attente()}")
 
 class Stratégie:
-    # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données 
+    # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données
+
+    def Update(self,Buffer_Principal,file_attente,indice_max):
+        liste_threads = []    # On initialise la liste des threads qui vont être éxécutés durant la boucle
+
+        liste_threads.append(threading.Thread(target=Buffer_Principal.Transmission(), args=(1,5)))
+        liste_threads[0].start() # On démarre la transmission du Buffer Principal 
+
+        for source_ in Source.liste_sources : 
+            liste_threads.append(threading.Thread(target=source_.Generateur_paquet(), args=(self.parametre_poisson,)))  # On génère de nouveaux paquets pour chaque source         
+
+        for thread in liste_threads[1:]:
+            thread.start()
+
+        for thread in liste_threads[1:]:
+            thread.join()
+
+        if self.numéro == 1:
+            source_Transmission = None # On initialise la source dont on va transmettre un paquet à None
+            capacite_max = 0 # On initialise la capacité locale de la source transmission à 0
+            for source_ in Source.liste_sources :
+                if source_.getCapacite_locale() > capacite_max:  # On choisit ici la source_ dont la capacite locale est maximale 
+                    capacite_max = source_.getCapacite_locale()
+                    source_Transmission = source_
+        elif self.numéro == 2:
+            source_Transmission = file_attente.pop(0) # On retire le premier élément de la file d'attente des sources
+            file_attente.append(source_Transmission)  # On lance le thread de tranmsission de la source choisit en amont vers le Buffer principal
+        else :
+            source_Transmission = file_attente[random.randint(0,indice_max)]  # On prend aléatoirement une source dans la file d'attente
+
+        liste_threads.append(threading.Thread(target=source_Transmission.Transmission()))  # On lance le thread de tranmsission de la source choisit en amont vers le Buffer principal
+        liste_threads[-1].start()
+        liste_threads[-1].join()
+
+        liste_threads[0].join() # Destination.Transmission()
+
+        if self.Destination.getListe_attente() != []:
+            self.Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé
+
     def __init__(self,numéro,nombre_source=2,échantillon=20,parametre_poisson=0.5):
         assert numéro in [1,2,3], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
         assert isinstance(nombre_source,int), "Le nombre de sources utilisées dans la simulation doit être un entier."
         Destination = Buffer() 
         Destination.setCapacite_locale(ajout=Buffer.Capacité - échantillon)  # On initialise la capacité local du Buffer Destination pour décider de la taille de l'échantillon de paquets sur lequel nous allons baser nos analyses
+        self.numéro = numéro
+        self.parametre_poisson = parametre_poisson
         self.Destination = Destination
         DEBUT_TEMPS_TEST = time.time()
 
@@ -171,129 +211,18 @@ class Stratégie:
             Source(Buffer_Principal)
         Buffer_Principal.setPredecesseur(Source.liste_sources) 
 
-        if numéro == 1:
-            # Implémentation de la stratégie n°1
-            for source_ in Source.liste_sources :
-                source_.Generateur_paquet(parametre_poisson) 
-
-            while Destination.getCapacite_locale() < Buffer.Capacité: 
-                
-                liste_threads = []    # On initialise la liste des threads qui vont être éxécutés durant la boucle
-
-                liste_threads.append(threading.Thread(target=Buffer_Principal.Transmission(), args=(1,5)))
-                liste_threads[0].start() # On démarre la transmission du Buffer Principal 
-
-                for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(), args=(parametre_poisson,)))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
-
-                for thread in liste_threads[1:]:
-                    thread.start()
-
-                for thread in liste_threads[1:]:
-                    thread.join()
-
-                source_Transmission = None # On initialise la source dont on va transmettre un paquet à None
-                capacite_max = 0 # On initialise la capacité locale de la source transmission à 0
-                for source_ in Source.liste_sources :
-                    if source_.getCapacite_locale() > capacite_max:  # On choisit ici la source_ dont la capacite locale est maximale 
-                        capacite_max = source_.getCapacite_locale()
-                        source_Transmission = source_
-
-                liste_threads.append(threading.Thread(target=source_Transmission.Transmission()))  # On lance le thread de tranmsission de la source choisit en amont vers le Buffer principal
-                liste_threads[-1].start()
-                liste_threads[-1].join()
-
-                liste_threads[0].join() # Destination.Transmission()
-
-                if Destination.getListe_attente() != []:
-                    Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé
-
-            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-            print(f"Buffer Destination : {Destination.getListe_attente()}") 
-            for source_ in Source.liste_sources : 
-                source_.AfficheTest()
-            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+        file_attente = Source.liste_sources  # On initialise une file d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal
+        indice_max = len(file_attente)-1 # On initialise l'indice max pouvant être tiré au hasard pour accéder à la file d'attente
         
-        elif numéro == 2:
-            # Implémentation de la stratégie n°2
-            for source_ in Source.liste_sources :
-                source_.Generateur_paquet(parametre_poisson) 
-            file_attente = Source.liste_sources  # On initialise une file d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal
+        while Destination.getCapacite_locale() < Buffer.Capacité:
+            self.Update(Buffer_Principal,file_attente,indice_max)
 
-            while Destination.getCapacite_locale() < Buffer.Capacité:  
-
-                liste_threads = []    # On initialise la liste des threads qui vont être éxécutés durant la boucle
-
-                liste_threads.append(threading.Thread(target=Buffer_Principal.Transmission(), args=(1,5)))
-                liste_threads[0].start() # On démarre la transmission du Buffer Principal 
-
-                for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(), args=(parametre_poisson,)))          # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
-
-                for thread in liste_threads[1:]:
-                    thread.start()
-
-                for thread in liste_threads[1:]:
-                    thread.join()                           
-
-                source_Transmission = file_attente.pop(0) # On retire le premier élément de la file d'attente des sources
-                liste_threads.append(threading.Thread(target=source_Transmission.Transmission()))  # On lance le thread de tranmsission de la source choisit en amont vers le Buffer principal
-                liste_threads[-1].start()
-                liste_threads[-1].join()
-                file_attente.append(source_Transmission) # On remet la source dans la file d'attente                 
-
-                liste_threads[0].join() # Destination.Transmission()
-
-                if Destination.getListe_attente() != []:
-                    Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé est stocké
-
-            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-            print(f"Buffer Destination : {Destination.getListe_attente()}")
-            for source_ in Source.liste_sources : 
-                source_.AfficheTest()
-            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
-
-        elif numéro == 3:
-            # Implémentation de la stratégie n°3
-            for source_ in Source.liste_sources :
-                source_.Generateur_paquet(parametre_poisson) 
-            file_attente = Source.liste_sources  # On initialise une source d'attente qui sera utilisée pour faire alterner le choix de la source par le Buffer principal 
-            indice_max = len(file_attente)-1 # On initialise l'indice max pouvant être tiré au hasard pour accéder à la file d'attente 
-            
-            while Destination.getCapacite_locale() < Buffer.Capacité: 
-
-                liste_threads = []    # On initialise la liste des threads qui vont être éxécutés durant la boucle
-
-                liste_threads.append(threading.Thread(target=Buffer_Principal.Transmission(), args=(1,5)))
-                liste_threads[0].start() # On démarre la transmission du Buffer Principal 
-
-                for source_ in Source.liste_sources : 
-                    liste_threads.append(threading.Thread(target=source_.Generateur_paquet(),args=(parametre_poisson,)))  # On fait une update sur toutes les sources (cela génère des paquets en résumé)         
-
-                for thread in liste_threads[1:]:
-                    thread.start()
-
-                for thread in liste_threads[1:]:
-                    thread.join()                            
-
-                source_Transmission = file_attente[random.randint(0,indice_max)]  # On prend aléatoirement une source dans la file d'attente 
-                liste_threads.append(threading.Thread(target=source_Transmission.Transmission()))  # On lance le thread de tranmsission de la source choisit en amont vers le Buffer principal
-                liste_threads[-1].start()
-                liste_threads[-1].join()
-
-                liste_threads[0].join()
-
-                if Destination.getListe_attente() != []: 
-                    Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé 
-
-            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-            print(f"Buffer Destination : {Destination.getListe_attente()}")
-            for source_ in Source.liste_sources : 
-                source_.AfficheTest()
-            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+        # Affichages de contôle pour s'assurer du bon fonctionnement du script 
+        print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
+        print(f"Buffer Destination : {Destination.getListe_attente()}") 
+        for source_ in Source.liste_sources : 
+            source_.AfficheTest()
+        print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
 
     def Analyse_Temps(self):
         """Cette méthode renvoie le temps moyen d'attente des paquets contenu dans le 'Buffer_Destination' qui modélise le destinataire des paquets."""
