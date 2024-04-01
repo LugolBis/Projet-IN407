@@ -17,7 +17,7 @@ class Paquet:
         temps_émission = time.time()  # On initialise le temps auquel le paquet est généré 
         self._temps_émision = temps_émission 
 
-        temps_arrivé = None  # On initialise le temps d'arrivé a destination du paquet 
+        temps_arrivé = None  # On initialise le temps d'arrivé a sa destination du paquet 
         self._temps_arrivé = temps_arrivé 
 
     def getTemps_émission(self):
@@ -61,9 +61,6 @@ class Buffer:
         self._capacite_locale = capacite_locale
 
         self._successeur = successeur # Bien sûr on initialise une méthode permetant d'accéder au successeur du Buffer
-
-        active = True  # On initialise une variable active pour contrôler l'activité du Buffer 
-        self._active = active 
         
     def getPredecesseur(self):
         return self._predecesseur
@@ -100,17 +97,10 @@ class Buffer:
         assert isinstance(buffer,[Buffer,list]), "Le successeur d'un buffer doit être un Buffer ou une liste."
         self._successeur = buffer
 
-    def getActive(self):
-        return self._active
-    def setActive(self,état):
-        assert état in [True,False], "La variable état ne prend que les valeurs : True, False."
-        self._active = état
-
     predecesseur = property(getPredecesseur, setPredecesseur)
     liste_attente = property(getListe_attente,setListe_attente)
     capacite_locale = property(getCapacite_locale,setCapacite_locale)
     successeur = property(getSuccesseur,setSuccesseur)
-    active = property(getActive,setActive)
 
     def Insertion(self,paquet:'Paquet'):
         """ Cette méthode permet d'insérer un Paquet dans le buffer """ 
@@ -138,10 +128,6 @@ class Source(Buffer):
         self._numéro = numéro
         time_active = time.time() # On initialise le temps de création de la source -> notamment utilisé
         self._time_active = time_active
-        active = True 
-        self._active = active
-        fournit = []  # Liste permettant la sauvegarde de tous les paquets générés -> sera utile pour les taux de pertes 
-        self._fournit = fournit
 
     def getNuméro(self):
         return self._numéro
@@ -153,44 +139,29 @@ class Source(Buffer):
     def setTime_active(self,nouveau_temps=0):
         self._time_active = nouveau_temps
 
-    def getActive(self):
-        return self._active
-    def setActive(self,état=True):
-        """L'état doit être l'une des valeurs : \n - True  \n - False"""
-        self._active = état
-
-    def getFournit(self):
-        return self._fournit
-    def setFournit(self,ajout):
-        self._fournit.append(ajout)   
-
     numéro = property(getNuméro,setNuméro)
     time_active = property(getTime_active,setTime_active)
-    active = property(getActive,setActive)
-    fournit = property(getFournit,setFournit)
 
     def Generateur_paquet(self,lambda_poisson=0.5):
         """ Générateur de paquet -- Attention !!!! il ne respecte pas encore la loi de poisson"""
         assert isinstance(self.getSuccesseur(), Buffer), f"La source n°{self.getNuméro()} n'a pas de successeur valide."
-        if self.getActive() == True :
-            temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
-            time.sleep(temps_delta) 
-            paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
-            print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta} -- temps actuel : {time.time()-self.getTime_active()} -- temps initial : {self.getTime_active()}")
-            self.setFournit(ajout=paquet)
-            self.Insertion(paquet) # On insère le paquet directement dans le Buffer rataché à la source 
+        temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
+        time.sleep(temps_delta) 
+        paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
+        print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta} -- temps actuel : {time.time()-self.getTime_active()} -- temps initial : {self.getTime_active()}")
+        self.Insertion(paquet) # On insère le paquet directement dans le Buffer rataché à la source 
 
     def AfficheTest(self):
         """ Cette fonction est temporaire elle ne sert qu'à afficher l'évolution de la Source pour faciliter les tests sur la classe """
-        print(f"Buffer Source {self.getNuméro()} : {self.getListe_attente()} -- Paquets fournit par la Source {self.getNuméro()} : {self.getFournit()}")
+        print(f"Buffer Source {self.getNuméro()} : {self.getListe_attente()}")
 
 class Stratégie:
-    # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données et d'encapsuler les quelques variables nécessaires au déroulement du script (a priori environ 5)
+    # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données 
     def __init__(self,numéro,nombre_source=2,échantillon=20,parametre_poisson=0.5):
-        assert numéro in [1,2,3,4], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
+        assert numéro in [1,2,3], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
         assert isinstance(nombre_source,int), "Le nombre de sources utilisées dans la simulation doit être un entier."
         Destination = Buffer() 
-        Destination.setCapacite_locale(ajout=Buffer.Capacité - échantillon)  # On initialise la capacité local du Buffer Destination pour décider de la taille de l'échantillon de paquets nous allons baser nos analyses
+        Destination.setCapacite_locale(ajout=Buffer.Capacité - échantillon)  # On initialise la capacité local du Buffer Destination pour décider de la taille de l'échantillon de paquets sur lequel nous allons baser nos analyses
         self.Destination = Destination
         DEBUT_TEMPS_TEST = time.time()
 
@@ -237,16 +208,12 @@ class Stratégie:
                 if Destination.getListe_attente() != []:
                     Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé
 
-                # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-                print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-                print(f"Buffer Destination : {Destination.getListe_attente()}") 
-                for source_ in Source.liste_sources : 
-                    source_.AfficheTest()
-                print(f"\n")
-
+            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
+            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
+            print(f"Buffer Destination : {Destination.getListe_attente()}") 
             for source_ in Source.liste_sources : 
-                    source_.setActive(False)
-            print(f"Fin du test !\n Le test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+                source_.AfficheTest()
+            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
         
         elif numéro == 2:
             # Implémentation de la stratégie n°2
@@ -279,18 +246,14 @@ class Stratégie:
                 liste_threads[0].join() # Destination.Transmission()
 
                 if Destination.getListe_attente() != []:
-                    Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé
+                    Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé est stocké
 
-                # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-                print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-                print(f"Buffer Destination : {Destination.getListe_attente()}")
-                for source_ in Source.liste_sources : 
-                    source_.AfficheTest()
-                print(f"\n")
-
+            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
+            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
+            print(f"Buffer Destination : {Destination.getListe_attente()}")
             for source_ in Source.liste_sources : 
-                    source_.setActive(False)
-            print(f"Fin du test !\n Le test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+                source_.AfficheTest()
+            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
 
         elif numéro == 3:
             # Implémentation de la stratégie n°3
@@ -325,16 +288,12 @@ class Stratégie:
                 if Destination.getListe_attente() != []: 
                     Destination.getListe_attente()[-1].setTemps_arrivé(time.time()) # Dès qu'un paquet arrive on stock son temps d'arrivé 
 
-                # Affichages de contôle pour s'assurer du bon fonctionnement du script 
-                print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
-                print(f"Buffer Destination : {Destination.getListe_attente()}")
-                for source_ in Source.liste_sources : 
-                    source_.AfficheTest()
-                print(f"\n")
-
+            # Affichages de contôle pour s'assurer du bon fonctionnement du script 
+            print(f"Buffer Principal : {Buffer_Principal.getListe_attente()}")
+            print(f"Buffer Destination : {Destination.getListe_attente()}")
             for source_ in Source.liste_sources : 
-                    source_.setActive(False) 
-            print(f"Fin du test !\n Le test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+                source_.AfficheTest()
+            print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
 
     def Analyse_Temps(self):
         """Cette méthode renvoie le temps moyen d'attente des paquets contenu dans le 'Buffer_Destination' qui modélise le destinataire des paquets."""
@@ -357,7 +316,7 @@ class Stratégie:
         else:
             return résultat
 
-Test = Stratégie(1,2,20,0.5)
+Test = Stratégie(3,2,20,0.5)
 
 print("\n--------------------- Analyses ---------------------\n")
 print(f"Le temps moyen d'attente des paquets est : {Test.Analyse_Temps()}")
