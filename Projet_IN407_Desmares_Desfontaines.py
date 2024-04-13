@@ -3,6 +3,9 @@
 import time
 import random
 import threading
+import os
+import platform
+import subprocess
 
 class Paquet:
     nombre_paquets = 0
@@ -261,3 +264,25 @@ class Interface:
     liste_objets = []
     def __init__(self):
         self.coucou = "Coucou Alexia ! Je te souhaites bon courage pour cette classe ;)"
+
+# Mécanisme d'installation !!!!!!!!!!!!!!!!!!!!!!! A vérifier....
+
+def install():
+    # On détecte le système d'exploitation
+    system = platform.system().lower()
+
+    # On adapte la commande d'installation en fonction du système d'exploitation 
+    if system == 'linux':
+        command = 'python Projet_IN407_DD_Mecanisme_install.py install'
+    elif system == 'darwin':
+        command = 'python Projet_IN407_DD_Mecanisme_install.py install'
+    elif system == 'windows':
+        command = 'python Projet_IN407_DD_Mecanisme_install.py install'
+    else:
+        raise OSError(f"Système d'exploitation non supporté : {system}")
+
+    # On éxécute la commande
+    subprocess.run(command, shell=True) 
+
+if __name__ == "__main__":
+    install()
