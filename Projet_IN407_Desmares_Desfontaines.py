@@ -41,6 +41,10 @@ class Paquet:
     def Calcule_attente(self):
         """Cette méthode renvoie le temps d'attente du paquet entre son émission et son arrivée dans à Destination."""
         return self.getTemps_arrivé() - self.getTemps_émission()
+    
+    @classmethod
+    def Réinitialiser(cls):
+        Paquet.nombre_paquets = 0
 
     def __repr__(self):
         return str(self.valeur)  # Chaque paquet est simplement représenté par sa valeur 
@@ -120,6 +124,12 @@ class Buffer:
             self.getSuccesseur().Insertion(paquet=self.setListe_attente(('DEPOP',0))) # On insère dans le buffer successeur le premier paquet du buffer 
             self.setCapacite_locale(ajout = -1) 
 
+    @classmethod
+    def Réinitialiser(cls):
+        Buffer.nombre_buffers = 0  # Cette variable de classe permet de compter le nombre de Buffer 
+        Buffer.Capacité = 100   # Cette variable de classe initialise la capacité maximale d'un Buffer (donc 100 paquet pour l'heure)
+        Buffer.liste_buffers = []
+
 class Source(Buffer):
     nombre_sources = 0
     liste_sources = [] # On stock dans une variable de la classe tous les objets 'Source'
@@ -157,6 +167,12 @@ class Source(Buffer):
     def AfficheTest(self):
         """ Cette fonction est temporaire elle ne sert qu'à afficher l'évolution de la Source pour faciliter les tests sur la classe """
         print(f"Buffer Source {self.getNuméro()} : {self.getListe_attente()}")
+
+    @classmethod
+    def Réinitialiser(cls):
+        super().Réinitialiser()
+        Source.nombre_sources = 0
+        Source.liste_sources = []
 
 class Stratégie:
     # Cette classe à pour but d'encapsuler les stratégies de gestion de flux de données
@@ -201,6 +217,11 @@ class Stratégie:
     def __init__(self,numéro,nombre_source=2,échantillon=20,parametre_poisson=0.5):
         assert numéro in [1,2,3], "Il n'existe que 3 stratégie différente qui sont : [1,2,3]."
         assert isinstance(nombre_source,int), "Le nombre de sources utilisées dans la simulation doit être un entier."
+        # On réinitialise les instances des classes
+        Paquet.Réinitialiser()
+        Buffer.Réinitialiser()
+        Source.Réinitialiser()
+        
         Destination = Buffer() 
         Destination.setCapacite_locale(ajout=Buffer.Capacité - échantillon)  # On initialise la capacité local du Buffer Destination pour décider de la taille de l'échantillon de paquets sur lequel nous allons baser nos analyses
         self.numéro = numéro
@@ -247,12 +268,16 @@ class Stratégie:
             return 0.0
         else:
             return résultat
-
-Test = Stratégie(3,2,20,0.5)
+print("----------------------- Test 1 -------------------------------------------------")
+Test1 = Stratégie(1,2,20,0.5)
+print("\n\n----------------------- Test 2 -------------------------------------------------")
+Test2 = Stratégie(2,2,20,0.5)
+print("\n\n----------------------- Test 3 -------------------------------------------------")
+Test2 = Stratégie(3,2,20,0.5)
 
 print("\n--------------------- Analyses ---------------------\n")
-print(f"Le temps moyen d'attente des paquets est : {Test.Analyse_Temps()}")
-print(f"Le taux de perte des paquets est : {Test.Analyse_Taux()}")
+print(f"Le temps moyen d'attente des paquets est : {Test1.Analyse_Temps()}")
+print(f"Le taux de perte des paquets est : {Test1.Analyse_Taux()}")
 
 # Note 1 : La modélisation de la loi de poisson est aproximative 
 
@@ -282,7 +307,7 @@ def install():
         raise OSError(f"Système d'exploitation non supporté : {system}")
 
     # On éxécute la commande
-    subprocess.run(command, shell=True) 
+    subprocess.run(command) 
 
 if __name__ == "__main__":
     install()
