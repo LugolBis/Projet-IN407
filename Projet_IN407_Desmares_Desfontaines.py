@@ -52,7 +52,7 @@ class Buffer:
     liste_buffers = []
     def __init__(self,successeur=None):
         # L'idée derrière prédescesseur et successeur est de lier les buffer entre eux, mais aussi à leur Source notamment pour simplifier la transmission des paquets
-        # Remarque : un buffer peut avoir plusieurs prédescesseurs 
+        # Remarque : un buffer peut avoir plusieurs prédecesseurs 
         Buffer.nombre_buffers += 1 # On incrémente la variable de classe comptant le nombre de buffer dès la création d'un nouveau buffer 
         Buffer.liste_buffers.append(self) # On ajoute à la variable de classe le Buffer en lui même
         predecesseur=[]  # On peut ici stocker les prédecesseurs du Buffer, ce qui pourra servir plus tard pour l'interface graphique
@@ -139,13 +139,13 @@ class Source(Buffer):
 
     def getNuméro(self):
         return self._numéro
-    def setNuméro(self,nouveau_numéro=0):   # On utilisira jamais cette fonction ! Elle est là pour décorer.
+    def setNuméro(self,nouveau_numéro=0):  
         self._numéro = nouveau_numéro
 
     numéro = property(getNuméro,setNuméro)
 
     def Generateur_paquet(self,lambda_poisson=0.5):
-        """ Générateur de paquet -- Attention !!!! il ne respecte pas encore la loi de poisson"""
+        """ Générateur de paquet"""
         assert isinstance(self.getSuccesseur(), Buffer), f"La source n°{self.getNuméro()} n'a pas de successeur valide."
         temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
         time.sleep(temps_delta) 
@@ -274,12 +274,6 @@ print(f"Le taux de perte des paquets est : {Test2.Analyse_Taux()}")
 print("- Stratégie n°3 -")
 print(f"Le temps moyen d'attente des paquets est : {Test3.Analyse_Temps()}")
 print(f"Le taux de perte des paquets est : {Test3.Analyse_Taux()}")
-
-# Note 1 : La modélisation de la loi de poisson est aproximative 
-
-# Note 2 : Y a pas d'interface graphique 
-
-# Note 3 : Qu'en est il de la portabilité ?
 
 class Interface:
     liste_objets = []
