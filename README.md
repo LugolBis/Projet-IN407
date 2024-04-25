@@ -1,4 +1,4 @@
-# ProjetIN407
+# Projet-IN407
 Projet pour l'IN407
 
 Loïc DESMARES
