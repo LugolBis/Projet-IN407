@@ -139,21 +139,13 @@ class Source(Buffer):
         numéro = Source.nombre_sources # On initialise le numéro de la source
         Source.liste_sources.append(self) # On ajoute à la variable de classe la Source en elle même 
         self._numéro = numéro
-        time_active = time.time() # On initialise le temps de création de la source -> notamment utilisé
-        self._time_active = time_active
 
     def getNuméro(self):
         return self._numéro
     def setNuméro(self,nouveau_numéro=0):   # On utilisira jamais cette fonction ! Elle est là pour décorer.
         self._numéro = nouveau_numéro
 
-    def getTime_active(self):
-        return self._time_active
-    def setTime_active(self,nouveau_temps=0):
-        self._time_active = nouveau_temps
-
     numéro = property(getNuméro,setNuméro)
-    time_active = property(getTime_active,setTime_active)
 
     def Generateur_paquet(self,lambda_poisson=0.5):
         """ Générateur de paquet -- Attention !!!! il ne respecte pas encore la loi de poisson"""
@@ -161,7 +153,7 @@ class Source(Buffer):
         temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
         time.sleep(temps_delta) 
         paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
-        print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta} -- temps actuel : {time.time()-self.getTime_active()} -- temps initial : {self.getTime_active()}")
+        print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta}") ####################################################################################################
         self.Insertion(paquet) # On insère le paquet directement dans le Buffer rataché à la source 
 
     def AfficheTest(self):
@@ -273,11 +265,18 @@ Test1 = Stratégie(1,2,20,0.5)
 print("\n\n----------------------- Test 2 -------------------------------------------------")
 Test2 = Stratégie(2,2,20,0.5)
 print("\n\n----------------------- Test 3 -------------------------------------------------")
-Test2 = Stratégie(3,2,20,0.5)
+Test3 = Stratégie(3,2,20,0.5)
 
 print("\n--------------------- Analyses ---------------------\n")
+print("- Stratégie n°1 -")
 print(f"Le temps moyen d'attente des paquets est : {Test1.Analyse_Temps()}")
 print(f"Le taux de perte des paquets est : {Test1.Analyse_Taux()}")
+print("- Stratégie n°2 -")
+print(f"Le temps moyen d'attente des paquets est : {Test2.Analyse_Temps()}")
+print(f"Le taux de perte des paquets est : {Test2.Analyse_Taux()}")
+print("- Stratégie n°3 -")
+print(f"Le temps moyen d'attente des paquets est : {Test3.Analyse_Temps()}")
+print(f"Le taux de perte des paquets est : {Test3.Analyse_Taux()}")
 
 # Note 1 : La modélisation de la loi de poisson est aproximative 
 
