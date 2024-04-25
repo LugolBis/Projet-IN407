@@ -153,7 +153,7 @@ class Source(Buffer):
         temps_delta = random.expovariate(1/lambda_poisson) # On choisit le délait d'attente avant de générer un nouveau paquet 
         time.sleep(temps_delta) 
         paquet = Paquet(source=self.getNuméro()) # On génère un paquet 
-        print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta}") ####################################################################################################
+        print(f"paquet n°{paquet} provenant de {self.getNuméro()} -- temps d'attente : {temps_delta}") 
         self.Insertion(paquet) # On insère le paquet directement dans le Buffer rataché à la source 
 
     def AfficheTest(self):
