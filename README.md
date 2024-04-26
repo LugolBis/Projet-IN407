@@ -5,6 +5,14 @@ Loïc DESMARES
 
 Alexia DESFONTAINES
 
+## Répartition des tâches
+### Loïc Desmares :
+Développement du coeur du projet. Implémentatiopn des classes : Paquet, Buffer, Source et Stratégie.
+Ainsi que du mécanisme d'installation du projet.
+
+### Alexia Desfontaines :
+Développement de l'interface graphique. Implémentation de la classe : Interface.
+
 ## Utilisation
 
 ### En Local
