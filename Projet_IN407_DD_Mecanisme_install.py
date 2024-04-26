@@ -18,4 +18,5 @@ if __name__ == '__main__':
 # Leur version est donc dépendante de l'interpréteur Python 
 
 version_python = sys.version.split()[0] # On récupère la version de l'interpréteur python 
-assert version_python >= '3.10.9', "Votre interpréteur python étant une ancienne version peut provoquer des erreurs avec l'application."
+version_python = tuple(int(nb) for nb in version_python.split('.')) # On converti le 'str' en tuple de 'int'
+assert version_python >= (3,9,10), "Votre interpréteur python étant une ancienne version peut provoquer des erreurs avec l'application."
