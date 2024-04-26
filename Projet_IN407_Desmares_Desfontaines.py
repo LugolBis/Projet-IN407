@@ -3,6 +3,7 @@
 import time
 import random
 import threading
+import customtkinter
 
 class Paquet:
     nombre_paquets = 0
@@ -235,7 +236,8 @@ class Stratégie:
         print(f"Buffer Destination : {Destination.getListe_attente()}") 
         for source_ in Source.liste_sources : 
             source_.AfficheTest()
-        print(f"\nFin du test !\nLe test a duré : {time.time() - DEBUT_TEMPS_TEST}")
+        self.temps_total = time.time() - DEBUT_TEMPS_TEST
+        print(f"\nFin du test !\nLe test a duré : {self.temps_total}")
 
     def Analyse_Temps(self):
         """Cette méthode renvoie le temps moyen d'attente des paquets contenu dans le 'Buffer_Destination' qui modélise le destinataire des paquets."""
@@ -257,25 +259,277 @@ class Stratégie:
             return 0.0
         else:
             return résultat
-print("----------------------- Test 1 -------------------------------------------------")
-Test1 = Stratégie(1,2,20,0.5)
-print("\n\n----------------------- Test 2 -------------------------------------------------")
-Test2 = Stratégie(2,2,20,0.5)
-print("\n\n----------------------- Test 3 -------------------------------------------------")
-Test3 = Stratégie(3,2,20,0.5)
 
-print("\n--------------------- Analyses ---------------------\n")
-print("- Stratégie n°1 -")
-print(f"Le temps moyen d'attente des paquets est : {Test1.Analyse_Temps()}")
-print(f"Le taux de perte des paquets est : {Test1.Analyse_Taux()}")
-print("- Stratégie n°2 -")
-print(f"Le temps moyen d'attente des paquets est : {Test2.Analyse_Temps()}")
-print(f"Le taux de perte des paquets est : {Test2.Analyse_Taux()}")
-print("- Stratégie n°3 -")
-print(f"Le temps moyen d'attente des paquets est : {Test3.Analyse_Temps()}")
-print(f"Le taux de perte des paquets est : {Test3.Analyse_Taux()}")
 
-class Interface:
-    liste_objets = []
+
+class Interface(customtkinter.CTk):             ### Classe qui gère tout l'aspect visuel du code
     def __init__(self):
-        self.coucou = "Coucou Alexia ! Je te souhaites bon courage pour cette classe ;)"
+        super().__init__()
+
+        ### On définit les caractéristiques de bases
+        self.title("Projet 2024 : Stratégies de gestion de flux.py")
+        largeur = 680
+        longueur = 1400
+        self.geometry(f"{longueur}x{largeur}")
+
+
+        ### On s'occupe ici des éléments de la page d'acceuil
+        self.frame_accueil = customtkinter.CTkFrame(self, width=longueur, height= largeur)
+        self.frame_accueil.pack_propagate(False)   
+        self.frame_accueil.pack()
+
+        self.label_commencer = customtkinter.CTkLabel(self.frame_accueil,font=("Helvetica", 40), 
+                                                    text=" Projet 2024 : \n Stratégies de gestion de flux à l’entrée d’un un réseau decommunication.\n\n DESFONTAINES - DESMARES",
+                                                    anchor="center")
+        self.label_commencer.pack(pady = 120)
+
+        self.bouton_accueil = customtkinter.CTkButton(self.frame_accueil, corner_radius= 40, text= "Commencer !",anchor="center",
+                                                       command= self.next_accueil, font=("Arial", 27), height= 30)
+        self.bouton_accueil.pack()
+
+
+        #### Eléments présents sur la page intermerdiaire
+        self.strat = customtkinter.CTkEntry(self.frame_accueil, placeholder_text="Entrer un numéro de stratégie")
+        self.bouton_demo = customtkinter.CTkButton(self.frame_accueil, text= "Lancer la démonstration ", command= self.next_explications, height= 30, width= 150,
+                                                    corner_radius= 30, font= ("Arial", 20))
+        self.erreur = customtkinter.CTkLabel(self.frame_accueil, text = "Saisie invalide. Ré-essayez !", font = ("Arial", 40), text_color="red")
+        self.bouton_analyses = customtkinter.CTkButton(self.frame_accueil, text= "Comparer les 3 stratégies", command= self.next_analyses,font= ("Arial", 20),
+                                                       corner_radius= 30, height= 30, width= 150)
+
+
+
+        ### On s'occupe de la page où la démonstration se fait
+        self.frame_principal = customtkinter.CTkFrame(self, width=1000, height=400)
+        self.frame_principal.pack_forget()
+        self.frame_principal.grid_columnconfigure(0, weight=1)
+        self.frame_principal.grid_columnconfigure(1, weight=1)
+        self.frame_principal.grid_rowconfigure(0, weight=1)
+        self.frame_principal.grid_rowconfigure(1, weight=1)
+
+
+        ### On s'occupe des composants de la page d'analyses
+        self.frame_analyses = customtkinter.CTkFrame(self, width= longueur, height= largeur)
+        self.frame_analyses.grid_propagate(False)
+        
+        self.frame_test1 = customtkinter.CTkFrame(self.frame_analyses, width = 400, height= 500)
+        self.frame_test2 = customtkinter.CTkFrame(self.frame_analyses, width = 400, height= 500)
+        self.frame_test3 = customtkinter.CTkFrame(self.frame_analyses, width = 400, height= 500)
+        self.frame_test1.grid_propagate(False)
+        self.frame_test2.grid_propagate(False)
+        self.frame_test3.grid_propagate(False)
+
+        self.label_test1 = customtkinter.CTkLabel(self.frame_test1, text="", bg_color= "transparent", anchor = "center")
+        self.label_test2 = customtkinter.CTkLabel(self.frame_test2, text="", bg_color= "transparent", anchor = "center")
+        self.label_test3 = customtkinter.CTkLabel(self.frame_test3, text="", bg_color= "transparent", anchor = "center")
+
+        self.bouton_quitter = customtkinter.CTkButton(self.frame_analyses, text= "Quitter", command= self.quit_app, font= ("Arial", 20),
+                                                       corner_radius= 30, height= 30, width= 150 )
+        
+
+
+
+        ### On créée des boites pour chacun des buffers et pouvoir illustrer l'ajout, le retrait et la transmission d'un paquet
+        mes_buffers = []
+        buffer = Buffer.liste_buffers[::-1]
+        for k in range(4): ### 4 car on fait nos tests avec deux buffers sources +  un buffer principal + un buffer destination
+            ### On créée les "boites" à tour de rôle et on les positionnes de différentes manières, selon le buffer auquel correspond la "boite"
+            self.frame_source = customtkinter.CTkFrame(self.frame_principal,width=100, height= 300, corner_radius=10, fg_color= "black")
+
+            if k == 0 :
+                self.frame_source.grid(column = 0, row = 0, pady = 10, padx = 10, sticky = "nsew")
+                self.frame_principal.grid_columnconfigure(0, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(0, weight=1, uniform="buffers")
+            elif k == 1:
+                self.frame_source.grid(column = 0, row = 1, pady = 10, padx = 10, sticky = "nsew")
+                self.frame_principal.grid_columnconfigure(0, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(1, weight=1, uniform="buffers")
+            elif k == 2:
+                self.frame_source.grid(column = 1, row = 0, rowspan = 2, pady = 10, padx = 10, sticky = "nsew")
+                self.frame_principal.grid_columnconfigure(1, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(0, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(1, weight=1, uniform="buffers")
+            else : 
+                self.frame_source.grid(column = 2,row = 0, rowspan = 2, pady = 10, padx = 10, sticky = "nsew")
+                self.frame_principal.grid_columnconfigure(2, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(0, weight=1, uniform="buffers")
+                self.frame_principal.grid_rowconfigure(1, weight=1, uniform="buffers")
+            mes_buffers.append(self.frame_source)
+
+        
+    ###   Méthode qui récupère que le chiffre saisi par l'utilisateur, et lance en conséquence la démonstration correspondante
+    def next_explications(self):
+        if  not isinstance(self.strat,int):
+            self.erreur.place( x = 440, y = 530)
+        strategie = int(self.strat.get())
+        if strategie not in [1,2,3]:
+            self.erreur.place( x = 440, y = 530)
+        else:
+            self.frame_accueil.destroy()
+            self.frame_principal.pack_propagate(False)
+            self.frame_principal.pack(pady = 20, fill = "both", expand = True)
+            if strategie == 1: 
+                self.demo_strat1()
+            elif strategie == 2 :
+                self.demo_start2()
+            else :
+                self.demo_strat3()
+
+
+    def next_accueil(self):   ### Méthode qui permet d'afficher la page précédent la page d'accueil, la page où l'on demande à l'utilisateur quelle stratégie adopter.
+        self.label_commencer.configure(text = "Il vous est demandé ici de choisir une stratégie à adopter pour la démonstration.\n"
+                                       " Vous avez 3 stratégies de gestion de la file d'attente possibles : \n"
+                                       "   – La file d’attente choisie est celle contenant le plus grand nombre de paquets.\n"
+                                       "   – Un paquet est pris de chaque file d’attente, à tour de rôle.\n"
+                                       "   – La file d’attente est choisie de manière aléatoire.\n"
+                                       "Entrez 1, 2 ou 3 puis appuyez sur le bouton.", font=("Helvetica", 30))
+        self.bouton_accueil.destroy()
+        self.strat.place(x = 630, y = 380)
+        self.bouton_demo.pack()
+        self.bouton_analyses.place(x = 570, y = 500)
+
+
+    ###   Méthode qui permet de lancer 3 tests avec des stratégies différentes, récupérer les données et les afficher afin de permettre une comparaison
+    def recup_data(self): 
+        liste_data = []
+
+        ###   On lance 3 stratégies différentes, sur un même nombre d'échantillon pour pouvoir les comparer par la suite
+        Strat1 = Stratégie(1,2,1,0.5)
+        Strat2 = Stratégie(2,2,1,0.5)
+        Strat3 = Stratégie(3,2,1,0.5)
+
+        ###   On stocke ici les données d'analyses obtenues, à la liste liste_data
+        liste_data.append((Strat1.Analyse_Temps(), Strat1.Analyse_Taux(), Strat1.temps_total))
+        liste_data.append((Strat2.Analyse_Temps(), Strat2.Analyse_Taux(), Strat2.temps_total))
+        liste_data.append((Strat3.Analyse_Temps(), Strat3.Analyse_Taux(), Strat3.temps_total))
+
+        ###   On affiche les données
+        self.label_test1.configure(text = f"Résultats Strat 1 \n\n\n\n temps moyen d'attente : {round(liste_data[0][0], 2)} s \n\n "
+                                   f"taux de perte : {round(liste_data[0][1],2)} \n\n durée du test :{round(liste_data[0][2],2)} s", font = ("Arial", 20))
+        self.label_test2.configure(text = f"Résultats Strat 2 \n\n\n\n temps moyen d'attente : {round(liste_data[1][0], 2)} s \n\n "
+                                   f"taux de perte : {round(liste_data[1][1],2)} \n\n durée du test :{round(liste_data[1][2],2)} s", font = ("Arial", 20))
+        self.label_test3.configure(text = f"Résultats Strat 3 \n\n\n\n temps moyen d'attente : {round(liste_data[2][0], 2)} s \n\n "
+                                   f"taux de perte : {round(liste_data[2][1],2)} \n\n durée du test :{round(liste_data[2][2],2)} s", font = ("Arial", 20))
+
+        self.label_test1.grid(padx = 55, pady = 150)
+        self.label_test2.grid(padx = 55, pady = 150)
+        self.label_test3.grid(padx = 55, pady = 150)
+
+
+    def next_analyses(self):   ### Méthode qui permet de changer de page, et d'afficher celle qui présente les résultats d'analyses
+        self.frame_accueil.destroy()
+        self.frame_analyses.grid()     
+        self.frame_test1.grid(column = 0, row = 0, padx = 40, pady = 20)
+        self.frame_test2.grid(column = 1, row = 0, padx = 20, pady = 20)
+        self.frame_test3.grid(column = 2, row = 0, padx = 40, pady = 20)
+        self.bouton_quitter.grid(column = 1, row = 1, pady = 20)
+        self.recup_data()
+
+    def quit_app(self):    ###   Méthode qui détruit complétement la fenetre d'interface graphique.
+        self.destroy()
+
+
+    def same_place(self, paquet_a_deplacer, my_x, x_destination): ###   Méthode qui permet juste de faire une pause dans l'animation du paquet_a_deplacer
+            app.after(300, lambda : self.deplacer(paquet_a_deplacer, my_x, x_destination))   ### Cette ligne permet de relancer le déplacement du paquet_a_deplacer
+
+
+    ###   Méthode qui change la coordonnée x du paquet_a_deplacer, et le ré-affiche en fonction de sa nouvelle position. 
+    def deplacer(self, paquet_a_deplacer, my_x, x_destination):
+            my_x += 40
+            if my_x < 740:    ###   Cela correspond au moment où le paquet se trouve entre sa position initiale et sa position intermediaire (dans le buffer principal)
+                paquet_a_deplacer.place(x = my_x)
+                app.after(300, lambda : self.deplacer(paquet_a_deplacer, my_x, x_destination))
+            elif my_x == 740:   ###   Cela correspond au moment où le paquet se trouve à sa position intermediaire (dans le buffer principal)
+                app.after(200, lambda : self.same_place(paquet_a_deplacer, my_x, x_destination))
+            elif 741 < my_x < x_destination:   ###  Cela correspond au moment où le paquet se trouve entre sa position intermediaire et sa position finale (dans le buffer Destination)
+                paquet_a_deplacer.place(x = my_x)
+                app.after(300, lambda : self.deplacer(paquet_a_deplacer, my_x, x_destination))
+
+
+    ###   Méthode qui lance l'animation de la stratégie 1
+    def demo_strat1(self):
+        paquet1_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet1_source1.place(x = 200, y = 100)
+
+        paquet2_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet2_source1.place(x = 150, y = 100)
+
+        paquet3_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet3_source1.place(x =100, y = 100)
+
+        paquet4_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet4_source1.place(x = 150, y = 150)
+
+        paquet5_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet5_source1.place(x = 100, y = 150)
+
+        paquet1_source2 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="red", text = "")
+        paquet1_source2.place(x = 150, y = 400)
+
+        paquet2_source2 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="red", text = "")
+        paquet2_source2.place(x = 100, y = 400)
+
+        self.deplacer(paquet1_source1, 200, 1300)
+        app.after(3500,lambda : self.deplacer(paquet2_source1, 150, 1250))
+        app.after(7000,lambda : self.deplacer(paquet3_source1, 100, 1200))
+        app.after(10500,lambda : self.deplacer(paquet4_source1, 150, 1250))
+        app.after(14000,lambda : self.deplacer(paquet1_source2, 150, 1250))
+        app.after(17500,lambda : self.deplacer(paquet5_source1, 100, 1200))
+        app.after(21000,lambda : self.deplacer(paquet2_source2, 100, 1200))
+
+
+    ###   Méthode qui lance l'animation de la stratégie 2
+    def demo_start2(self):
+        paquet1_source1 = customtkinter.CTkLabel(self.frame_principal, width= 30, height= 30, bg_color="blue", text = "")
+        paquet1_source1.place(x = 200, y = 100)
+
+        paquet2_source1 = customtkinter.CTkLabel(self.frame_principal, width= 30, height= 30, bg_color="blue", text = "")
+        paquet2_source1.place(x = 150, y = 100)
+
+        paquet3_source1 = customtkinter.CTkLabel(self.frame_principal, width= 30, height= 30, bg_color="blue", text = "")
+        paquet3_source1.place(x =100, y = 100)
+
+        paquet1_source2 = customtkinter.CTkLabel(self.frame_principal, width= 30, height= 30, bg_color="red", text = "")
+        paquet1_source2.place(x = 200, y = 400)
+
+        paquet2_source2 = customtkinter.CTkLabel(self.frame_principal, width= 30, height= 30, bg_color="red", text = "")
+        paquet2_source2.place(x = 150, y = 400)
+
+        self.deplacer(paquet1_source1, 200, 1300)
+        app.after(3500,lambda : self.deplacer(paquet1_source2, 200, 1300))
+        app.after(7000,lambda : self.deplacer(paquet2_source1, 150, 1250))
+        app.after(10500,lambda : self.deplacer(paquet2_source2, 150, 1250))
+        app.after(14000,lambda : self.deplacer(paquet3_source1, 100, 1200))
+
+
+    ###   Méthode qui lance l'animation de la stratégie 3
+    def demo_strat3(self):
+        paquet1_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet1_source1.place(x = 200, y = 100)
+
+        paquet2_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet2_source1.place(x = 150, y = 100)
+
+        paquet3_source1 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="blue", text = "")
+        paquet3_source1.place(x =100, y = 100)
+
+        paquet1_source2 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="red", text = "")
+        paquet1_source2.place(x = 200, y = 400)
+
+        paquet2_source2 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="red", text = "")
+        paquet2_source2.place(x = 150, y = 400)
+
+        paquet3_source2 = customtkinter.CTkLabel(app, width= 30, height= 30, bg_color="red", text = "")
+        paquet3_source2.place(x = 100, y = 400)
+
+
+        self.deplacer(paquet1_source2, 200, 1300)
+        app.after(3500,lambda : self.deplacer(paquet2_source2, 150, 1250))
+        app.after(7000,lambda : self.deplacer(paquet1_source1, 200, 1300))
+        app.after(10500,lambda : self.deplacer(paquet3_source2, 100, 1200))
+        app.after(14000,lambda : self.deplacer(paquet2_source1, 150, 1250))
+        app.after(17500,lambda : self.deplacer(paquet3_source1, 100, 1200))
+        
+
+if __name__ == "__main__":
+    app = Interface()
+    app.mainloop()
