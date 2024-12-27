@@ -25,6 +25,6 @@ Développement de l'interface graphique. Implémentation de la classe : ```Inter
 
 Téléchargez l'ensemble des fichiers et exécutez les commandes suivantes :
 ```
-$ python3 Projet_IN407_DD_Mecanisme_install
-$ python3 Projet_IN407_Desmares_Desfontaines
+$ python3 Projet_IN407_DD_Mecanisme_install.py
+$ python3 Projet_IN407_Desmares_Desfontaines.py
 ```
